@@ -1,0 +1,24 @@
+ex2:
+
+a) 
+
+
+b) lr 0.1: 
+Training loss: 0.4335
+Valid acc: 0.8204
+Final Test acc: 0.7675
+Execution time: 195.6931688785553 seconds
+
+
+lr 0.01:
+Training loss: 0.4937
+Valid acc: 0.7918
+Final Test acc: 0.7278
+Execution time: 200.04366517066956 seconds
+
+lr 0.001:
+Training loss: 0.8486
+Valid acc: 0.6868
+Final Test acc: 0.7108
+Execution time: 191.39094853401184 seconds
+
