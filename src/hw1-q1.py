@@ -46,7 +46,16 @@ class Perceptron(LinearModel):
         other arguments are ignored
         """
         # Q1.1a
-        raise NotImplementedError
+
+        # Calculate the prediction
+        scores = np.dot(self.W, x_i)
+        y_pred = scores.argmax()
+
+        # Check if the prediction is incorrect (misclassified)
+        if y_i != y_pred:
+            # Update the weights based on the perceptron learning rule
+            self.W[y_i, :] += x_i
+            self.W[y_pred, :] -= x_i
 
 
 class LogisticRegression(LinearModel):
