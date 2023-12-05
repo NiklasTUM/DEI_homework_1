@@ -49,7 +49,7 @@ class Perceptron(LinearModel):
 
         # Calculate the prediction
         scores = np.dot(self.W, x_i)
-        y_pred = scores.argmax()
+        y_pred = np.argmax(scores)
 
         # Check if the prediction is incorrect (misclassified)
         if y_i != y_pred:
@@ -66,7 +66,21 @@ class LogisticRegression(LinearModel):
         learning_rate (float): keep it at the default value for your plots
         """
         # Q1.1b
-        raise NotImplementedError
+
+        # Get probability scores according to the model (num_labels x 1).
+        label_scores = np.expand_dims(self.W.dot(x_i), axis = 1)
+
+        # One-hot encode true label (num_labels x 1).
+        y_one_hot = np.zeros((np.size(self.W, 0),1))
+        y_one_hot[y_i] = 1
+
+        # Softmax function
+        # This gives the label probabilities according to the model (num_labels x 1).
+        label_probabilities = np.exp(label_scores) / np.sum(np.exp(label_scores))
+        
+        # SGD update. W is num_labels x num_features.
+        self.W = self.W + learning_rate * (y_one_hot - label_probabilities).dot(np.expand_dims(x_i, axis = 1).T)
+        
 
 
 class MLP(object):
@@ -75,14 +89,27 @@ class MLP(object):
     # in main().
     def __init__(self, n_classes, n_features, hidden_size):
         # Initialize an MLP with a single hidden layer.
-        raise NotImplementedError
+        self.hidden_size = hidden_size
+        self.W1 = np.random.normal(0.1, 0.12, (hidden_size, n_features))
+        self.b1 = np.zeros((hidden_size,))
+        self.W2 = np.random.normal(0.1, 0.12, (n_classes, hidden_size))
+        self.b2 = np.zeros((n_classes,))
+
+    def relu(self, x):
+        # ReLU activation function
+        return np.maximum(0, x)
+
+    def softmax(self, x):
+        # Softmax activation function
+        exp_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
+        return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
 
     def predict(self, X):
-        # Compute the forward pass of the network. At prediction time, there is
-        # no need to save the values of hidden nodes, whereas this is required
-        # at training time.
-        raise NotImplementedError
-
+        # Compute the forward pass of the network.
+        hidden_activations = self.relu(np.dot(X, self.W1.T) + self.b1)
+        scores = np.dot(hidden_activations, self.W2.T) + self.b2
+        return np.argmax(self.softmax(scores), axis=1)
+    
     def evaluate(self, X, y):
         """
         X (n_examples x n_features)
@@ -94,11 +121,58 @@ class MLP(object):
         n_possible = y.shape[0]
         return n_correct / n_possible
 
+    def compute_loss_and_gradients(self, X, y):
+        # Compute the loss and gradients using backpropagation.
+
+        # Forward pass
+        hidden_activations = self.relu(np.dot(X, self.W1.T) + self.b1)
+        scores = np.dot(hidden_activations, self.W2.T) + self.b2
+        softmax_scores = self.softmax(scores)
+
+        # Compute cross-entropy loss
+        num_examples = X.shape[0]
+        correct_class_scores = softmax_scores[range(num_examples), y]
+        loss = -np.sum(np.log(correct_class_scores)) / num_examples
+
+        # Backward pass
+        dscores = softmax_scores.copy()
+        dscores[range(num_examples), y] -= 1
+        dscores /= num_examples
+
+        dW2 = np.dot(dscores.T, hidden_activations)
+        db2 = np.sum(dscores, axis=0)
+
+        dhidden = np.dot(dscores, self.W2)
+        dhidden[hidden_activations <= 0] = 0  # ReLU backpropagation
+
+        dW1 = np.dot(dhidden.T, X)
+        db1 = np.sum(dhidden, axis=0)
+
+        return loss, dW1, db1, dW2, db2
+
     def train_epoch(self, X, y, learning_rate=0.001):
-        """
-        Dont forget to return the loss of the epoch.
-        """
-        raise NotImplementedError
+        # Train the model for one epoch using stochastic gradient descent.
+        num_examples = X.shape[0]
+        indices = np.arange(num_examples)
+        np.random.shuffle(indices)
+
+        total_loss = 0
+        for i in indices:
+            x_i = X[i, :]
+            y_i = y[i]
+
+            # Compute loss and gradients
+            loss, dW1, db1, dW2, db2 = self.compute_loss_and_gradients(x_i.reshape(1, -1), np.array([y_i]))
+
+            # Update parameters
+            self.W1 -= learning_rate * dW1
+            self.b1 -= learning_rate * db1
+            self.W2 -= learning_rate * dW2
+            self.b2 -= learning_rate * db2
+
+            total_loss += loss
+
+        return total_loss / num_examples
 
 
 def plot(epochs, train_accs, val_accs):
